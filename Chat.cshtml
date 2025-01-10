@@ -1,0 +1,64 @@
+@page
+@model ChatModel
+
+@{
+    ViewData["Title"] = "Home page";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Chat</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.0/signalr.min.js"></script>
+</head>
+<body>
+
+    <div>
+        <h1>Chat</h1>
+        <div id="messagesList"></div>
+        <input type="text" id="messageInput" placeholder="Type a message" maxlength="128"/>
+
+        <button type ="submit" onclick="sendMessage()">Enviar</button>
+        </div>
+    <script>
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/chathub")
+            .build();
+
+        connection.on("ReceiveMessage", (user, message) => {
+            const msg = `${user}: ${message}`;
+            const li = document.createElement("li");
+            li.textContent = msg;
+            document.getElementById("messagesList").appendChild(li);
+        });
+
+        async function start() {
+            try {
+                await connection.start();
+                console.log("SignalR Connected.");
+            } catch (err) {
+                console.error(err.toString());
+                setTimeout(start, 5000);
+            }
+        }
+
+        connection.onclose(async () => {
+            await start();
+        });
+
+        start();
+
+        async function sendMessage() {
+
+            const message = document.getElementById("messageInput").value;
+            if (message.trim() !== "") { // Only send if the message is not empty
+                connection.invoke("SendMessage", message)
+                    .catch(err => console.error(err.toString()));
+        
+                messageInput.value = ""; // Clear the input field
+            }
+        }
+    </script>
+</body>
+</html>
